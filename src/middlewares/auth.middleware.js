@@ -8,9 +8,8 @@ import { getBookingConnection } from "../config/bookingDb.js";
 import { getBookingDriverModel } from "../models/bookingDriver.model.js";
 const authMiddleware = async (req, res, next) => {
   console.log("=== Incoming Auth request ===");
-  console.log("Headers:", req.headers);
-  console.log("Cookies:", req.cookies);
-  
+
+
   try {
     let token = req.cookies.token;
 
@@ -22,8 +21,7 @@ const authMiddleware = async (req, res, next) => {
     ) {
       token = req.headers.authorization.split(" ")[1];
     }
-  
-    console.log("Extracted token:", token);
+
 
     if (!token) {
       console.log("Auth fail: No token provided");
@@ -36,7 +34,7 @@ const authMiddleware = async (req, res, next) => {
     // 2️⃣ Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log("Decoded JWT payload:", decoded);
-    
+
     // ⚠️ Make sure this matches how you created token
     // If you used: jwt.sign({ id: user._id })
     // then use decoded.id
@@ -56,6 +54,10 @@ const authMiddleware = async (req, res, next) => {
       case "police":
       case "police_hq":
         user = await Police.findById(decoded.id).select("-password");
+        console.log(
+          "AUTH DIRECT POLICE LOOKUP:",
+          user ? "FOUND IN POLICE" : "NOT FOUND IN POLICE"
+        );
         break;
 
       case "ambulance_driver":
@@ -80,9 +82,18 @@ const authMiddleware = async (req, res, next) => {
         user = await User.findById(decoded.id).select("-password");
     }
     if (!user) {
-      user = await User.findById(decoded.id).select("-password");
+      console.log("AUTH: TRYING USER COLLECTION FALLBACK");
+
+      user = await User
+        .findById(decoded.id)
+        .select("-password");
+
+      console.log(
+        "AUTH USER FALLBACK:",
+        user ? "FOUND IN USER" : "NOT FOUND IN USER"
+      );
     }
-   
+
     console.log("Resolved user record:", user ? { _id: user._id, role: user.role, email: user.email } : "NULL");
 
     req.user = user;

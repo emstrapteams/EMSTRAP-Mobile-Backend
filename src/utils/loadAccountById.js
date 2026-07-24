@@ -29,25 +29,80 @@ export const loadAccountById = async (id, role) => {
 };
 
 export const loadAccountByIdForPassword = async (user) => {
-  const id = user._id;
-  const role = user.role;
+  const id = user?._id || user?.id;
+  const role = user?.role;
 
-  if (role === "ambulance_driver" || role === "ambulance") {
-    return Ambulance.findById(id);
+  console.log("CHANGE PASSWORD ACCOUNT:", {
+    id,
+    role,
+  });
+
+  if (!id) {
+    return null;
   }
+
+  if (
+    role === "ambulance_driver" ||
+    role === "ambulance"
+  ) {
+    return Ambulance
+      .findById(id)
+      .select("+password");
+  }
+
   if (role === "private_driver") {
-    return getBookingDriverModel(getBookingConnection()).findById(id);
+    return getBookingDriverModel(
+      getBookingConnection()
+    )
+      .findById(id)
+      .select("+password");
   }
-  if (role === "hospital" || role === "hospital_admin") {
-    return Hospital.findById(id);
+
+  if (
+    role === "hospital" ||
+    role === "hospital_admin"
+  ) {
+    return Hospital
+      .findById(id)
+      .select("+password");
   }
-  if (role === "police" || role === "police_hq") {
-    return Police.findById(id);
+
+  if (
+    role === "police" ||
+    role === "police_hq"
+  ) {
+    const police = await Police
+      .findById(id)
+      .select("+password");
+
+    if (police) {
+      return police;
+    }
+
+    // Some existing police accounts are stored
+    // in the users collection with role "police".
+    return User
+      .findById(id)
+      .select("+password");
   }
+
   if (role === "admin") {
-    return (await Admin.findById(id)) || User.findById(id);
+    const admin = await Admin
+      .findById(id)
+      .select("+password");
+
+    if (admin) {
+      return admin;
+    }
+
+    return User
+      .findById(id)
+      .select("+password");
   }
-  return User.findById(id);
+
+  return User
+    .findById(id)
+    .select("+password");
 };
 
 export default loadAccountById;

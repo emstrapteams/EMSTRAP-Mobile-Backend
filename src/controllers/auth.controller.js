@@ -68,13 +68,13 @@ export const registerUser = async (req, res) => {
 
   try {
     if (!mobile || !/^[6-9]\d{9}$/.test(mobile)) {
-        return res.status(400).json({ message: "Please enter a valid 10-digit Indian mobile number." });
+      return res.status(400).json({ message: "Please enter a valid 10-digit Indian mobile number." });
     }
 
     // Strong Password Validation (Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character)
     const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!strongPasswordRegex.test(password)) {
-        return res.status(400).json({ message: "Password must be at least 8 characters long, including an uppercase letter, lowercase letter, number, and special character." });
+      return res.status(400).json({ message: "Password must be at least 8 characters long, including an uppercase letter, lowercase letter, number, and special character." });
     }
 
     const userExists = await findAccountByEmail(email);
@@ -300,8 +300,8 @@ export const loginUser = async (req, res) => {
       found: Boolean(user),
       role: user?.role || null,
     });
-    
-    
+
+
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
@@ -309,7 +309,7 @@ export const loginUser = async (req, res) => {
 
     const passwordMatched =
       await verifyPasswordAndUpgradeIfNeeded(user, password);
-    
+
     console.log("[auth] user password match result", { email, passwordMatched });
 
     if (user && passwordMatched) {
@@ -464,7 +464,7 @@ export const updateUser = async (req, res) => {
   const { name, email, mobile, city, address, driverStatus, vehicleNumber } = req.body;
   try {
     if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
-        return res.status(400).json({ message: "Please enter a valid 10-digit Indian mobile number." });
+      return res.status(400).json({ message: "Please enter a valid 10-digit Indian mobile number." });
     }
 
     const userId = req.user._id;
@@ -562,17 +562,21 @@ export const changePassword = async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   try {
     const user = await loadAccountByIdForPassword(req.user);
-
+    console.log("PASSWORD ACCOUNT FOUND:", {
+      found: !!user,
+      role: req.user?.role,
+      hasPassword: !!user?.password,
+    });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    
+
     // Verify current password using the utility that handles legacy hashing
     const isMatch = await verifyPasswordAndUpgradeIfNeeded(user, currentPassword);
     if (!isMatch) {
       return res.status(400).json({ message: "Incorrect current password." });
     }
-    
+
     // Validate new password
     const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!strongPasswordRegex.test(newPassword)) {
@@ -581,7 +585,7 @@ export const changePassword = async (req, res) => {
 
     user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
-    
+
     res.status(200).json({ message: "Password changed successfully." });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -610,7 +614,7 @@ export const forgotPassword = async (req, res) => {
     const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
     const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a PUT request to: \n\n ${resetUrl}`;
-    
+
     const htmlMessage = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
         <h2 style="color: #333;">Password Reset Request</h2>
