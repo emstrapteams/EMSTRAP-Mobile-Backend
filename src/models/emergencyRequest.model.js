@@ -139,6 +139,21 @@ const emergencyRequestSchema = new mongoose.Schema(
       ],
       default: "PENDING",
     },
+    hospitalResolved: {
+      type: Boolean,
+      default: false,
+    },
+
+    hospitalResolvedAt: {
+      type: Date,
+      default: null,
+    },
+
+    hospitalResolvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Hospital",
+      default: null,
+    },
 
     ambulance: {
       type: mongoose.Schema.Types.ObjectId,

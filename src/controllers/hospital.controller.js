@@ -154,7 +154,73 @@ export const updateHospital = async (req, res) => {
     return res.status(500).json({ success: false, message: "Error updating hospital", error: error.message });
   }
 };
+export const updateMyHospitalProfile = async (req, res) => {
+  try {
+    const validationError = validateHospitalPayload(req.body, true);
 
+    if (validationError) {
+      return res.status(400).json({
+        success: false,
+        message: validationError,
+      });
+    }
+
+    const updatePayload = {};
+
+    const allowedFields = [
+      "name",
+      "address",
+      "city",
+      "mobile",
+      "email",
+      "emergencyBeds",
+    ];
+
+    allowedFields.forEach((field) => {
+      if (
+        typeof req.body[field] !== "undefined" &&
+        req.body[field] !== ""
+      ) {
+        updatePayload[field] = req.body[field];
+      }
+    });
+
+    if (req.body.location) {
+      updatePayload.location = {
+        latitude: req.body.location.latitude ?? 0,
+        longitude: req.body.location.longitude ?? 0,
+      };
+    }
+
+    const hospital = await Hospital.findByIdAndUpdate(
+      req.user._id,
+      updatePayload,
+      {
+        new: true,
+        runValidators: true,
+      }
+    ).select("-password");
+
+    if (!hospital) {
+      return res.status(404).json({
+        success: false,
+        message: "Hospital not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      hospital,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error updating profile",
+      error: error.message,
+    });
+  }
+};
 export const updateEmergencyBeds = async (req, res) => {
   try {
     const { emergencyBeds } = req.body;
@@ -225,9 +291,20 @@ export const deleteHospital = async (req, res) => {
 export const getPatientRecords = async (req, res) => {
   try {
     const patients = await EmergencyRequest.find({
-      hospital: req.user.id, // optional if hospital-specific
+      hospital: req.user.id,
     })
-      .populate("user", "name age gender")
+      .populate(
+        "user",
+        "name age gender mobile email"
+      )
+      .populate(
+        "ambulance",
+        "name email mobile vehicleNumber"
+      )
+      .populate(
+        "hospital",
+        "name email mobile address city"
+      )
       .sort({ createdAt: -1 });
 
     res.json({
@@ -235,6 +312,38 @@ export const getPatientRecords = async (req, res) => {
       data: patients,
     });
   } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+export const resolvePatientCase = async (req, res) => {
+  try {
+    const emergency = await EmergencyRequest.findById(req.params.id);
+
+    if (!emergency) {
+      return res.status(404).json({
+        success: false,
+        message: "Emergency not found",
+      });
+    }
+
+    emergency.hospitalResolved = true;
+    emergency.hospitalResolvedAt = new Date();
+    emergency.hospitalResolvedBy = req.user._id;
+
+    await emergency.save();
+
+    return res.json({
+      success: true,
+      message: "Case marked as resolved.",
+      emergency,
+    });
+  } catch (err) {
+    console.error(err);
+
     res.status(500).json({
       success: false,
       message: err.message,

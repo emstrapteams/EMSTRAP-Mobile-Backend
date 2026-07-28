@@ -16,8 +16,12 @@ export const getAlerts = async (req, res) => {
 
     let filter = {
       requestType: "EMERGENCY",
-      duplicateDetected: { $ne: true }
+      duplicateDetected: { $ne: true },
     };
+
+    if (isHospital) {
+      filter.hospital = req.user._id;
+    }
 
     const emergencies = await Emergency.find(filter)
       .populate("user", "name email mobile city")
