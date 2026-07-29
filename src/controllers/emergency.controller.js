@@ -97,9 +97,15 @@ export const assignHospital = async (req, res) => {
 
     io.to("police").emit("police_new_case", { request: updated, hospitalSelected: true });
     io.to("police").emit("police_alert", { request: updated });
-    io.emit("emergency_updated", updated);
+    const room = `request_${id}`;
+    console.log("STEP 3 (assignHospital)");
+    console.log(room);
+    const members = io.sockets.adapter.rooms.get(room);
+    console.log("Members:", members ? [...members] : "NO MEMBERS");
+
     // Also update the user tracking the request
-    io.to(`request_${id}`).emit("ambulance_assigned", {
+    console.log("Emitting ambulance_assigned");
+    io.to(room).emit("ambulance_assigned", {
       driverName: req.user.name || "Driver",
       driverMobile: req.user.mobile || "",
       vehicleNumber: req.user.vehicleNumber || "",
@@ -110,9 +116,11 @@ export const assignHospital = async (req, res) => {
       status: "EN_ROUTE_TO_HOSPITAL",
     });
 
-    io.to(`request_${id}`).emit("hospital_assigned", updated);
+    console.log("Emitting hospital_assigned");
+    io.to(room).emit("hospital_assigned", updated);
 
-    io.to(`request_${id}`).emit("emergency_updated", updated);
+    console.log("Emitting emergency_updated");
+    io.to(room).emit("emergency_updated", updated);
 
     res.status(200).json({ success: true, data: updated });
   } catch (error) {
@@ -152,12 +160,20 @@ export const markArrived = async (req, res) => {
       .populate("ambulance", "name email mobile vehicleNumber");
 
     const io = getIO();
-    io.to(`request_${id}`).emit("driver_arrived", {
+    const room = `request_${id}`;
+    console.log("STEP 3 (markArrived)");
+    console.log(room);
+    const members = io.sockets.adapter.rooms.get(room);
+    console.log("Members:", members ? [...members] : "NO MEMBERS");
+
+    console.log("Emitting driver_arrived");
+    io.to(room).emit("driver_arrived", {
       requestId: id,
       status: "ARRIVED_AT_LOCATION",
     });
 
-    io.to(`request_${id}`).emit("emergency_updated", populated);
+    console.log("Emitting emergency_updated");
+    io.to(room).emit("emergency_updated", populated);
 
     io.to("police").emit("police_alert", {
       request: populated,
@@ -593,6 +609,7 @@ export const uploadEvidence = async (req, res) => {
 };
 
 export const acceptEmergency = async (req, res) => {
+  console.log("STEP 1 - acceptEmergency entered");
   try {
     const { id } = req.params;
 
@@ -640,6 +657,9 @@ export const acceptEmergency = async (req, res) => {
         "name address city mobile email location"
       );
 
+    console.log("STEP 2 - Emergency updated");
+    console.log(request.status);
+
     // Update related booking if it's a regular booking request
     if (request.requestType === "BOOKING") {
       await getBookingModel().findOneAndUpdate(
@@ -649,8 +669,15 @@ export const acceptEmergency = async (req, res) => {
     }
 
     const io = getIO();
+    const room = `request_${id}`;
+    console.log("STEP 3");
+    console.log(room);
+    const members = io.sockets.adapter.rooms.get(room);
+    console.log("Members:", members ? [...members] : "NO MEMBERS");
+
     // Notify the user tracking the request
-    io.to(`request_${id}`).emit("ambulance_assigned", {
+    console.log("Emitting ambulance_assigned");
+    io.to(room).emit("ambulance_assigned", {
       eta: "Calculating...", // or some other more dynamic placeholder if you don't have real ETA
       driverName: req.user.name || "Driver",
       driverMobile: req.user.mobile || "",
@@ -658,6 +685,9 @@ export const acceptEmergency = async (req, res) => {
       hospitalName: request.hospital?.name || "Assigning...",
       hospitalLocation: request.hospital ? `${request.hospital.address}, ${request.hospital.city}` : "N/A",
     });
+
+    console.log("Emitting emergency_updated");
+    io.to(room).emit("emergency_updated", request);
 
     // Notify user's personal room for dashboard refresh
     if (request.user) {
@@ -882,13 +912,21 @@ export const completeRequest = async (req, res) => {
     }
 
     const io = getIO();
+    const room = `request_${id}`;
+    console.log("STEP 3 (completeEmergency)");
+    console.log(room);
+    const members = io.sockets.adapter.rooms.get(room);
+    console.log("Members:", members ? [...members] : "NO MEMBERS");
+
     // Notify the user tracking the request
-    io.to(`request_${id}`).emit("trip_completed", {
+    console.log("Emitting trip_completed");
+    io.to(room).emit("trip_completed", {
       requestId: id,
       status: "COMPLETED",
     });
 
-    io.to(`request_${id}`).emit("emergency_updated", request);
+    console.log("Emitting emergency_updated");
+    io.to(room).emit("emergency_updated", request);
 
     // Notify user's personal room for dashboard refresh
     if (request.user) {

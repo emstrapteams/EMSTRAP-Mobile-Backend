@@ -36,7 +36,9 @@ export const initSocket = (server) => {
 
   io.on("connection", (socket) => {
 
-
+    console.log("✅ New socket connected:", socket.id);
+    console.log("Origin:", socket.handshake.headers.origin);
+    console.log("Transport:", socket.conn.transport.name);
     // Ambulance joins a specific room to receive nearby requests
     socket.on("join_ambulance", (data) => {
       console.log("JOIN_AMBULANCE EVENT RECEIVED", socket.id);
@@ -142,9 +144,15 @@ export const initSocket = (server) => {
 
     // User joins a specific request room to track their ambulance
     socket.on("track_request", (data) => {
-      if (data.requestId) {
-        socket.join(`request_${data.requestId}`);
-        console.log(`User tracking request: ${data.requestId}`);
+      console.log("📥 RECEIVED track_request event from socket:", socket.id, "payload:", data);
+      if (data && data.requestId) {
+        const roomName = `request_${data.requestId}`;
+        socket.join(roomName);
+        console.log(`✅ Socket ${socket.id} joined room ${roomName}. Current socket rooms:`, [...socket.rooms]);
+        const members = io.sockets.adapter.rooms.get(roomName);
+        console.log(`Members in ${roomName}:`, members ? [...members] : "EMPTY ROOM");
+      } else {
+        console.log("⚠️ track_request received without requestId!", data);
       }
     });
 
@@ -155,8 +163,12 @@ export const initSocket = (server) => {
       }
     });
 
-    socket.on("disconnect", () => {
-      console.log("Socket disconnected:", socket.id);
+    socket.on("disconnecting", (reason) => {
+      console.log("❌ Socket disconnecting:", socket.id, "reason:", reason, "rooms before disconnect:", [...socket.rooms]);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("❌ Socket disconnected:", socket.id, "reason:", reason);
     });
     socket.on("join_private_driver", () => {
       socket.join("private_driver");
