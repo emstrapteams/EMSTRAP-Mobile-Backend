@@ -25,6 +25,21 @@ const bookingDriverSchema = new Schema(
             default: false,
         },
 
+        currentLocation: {
+            latitude: {
+                type: Number,
+                default: null,
+            },
+            longitude: {
+                type: Number,
+                default: null,
+            },
+            updatedAt: {
+                type: Date,
+                default: Date.now,
+            },
+        },
+
         resetPasswordToken: String,
         resetPasswordExpire: Date,
 

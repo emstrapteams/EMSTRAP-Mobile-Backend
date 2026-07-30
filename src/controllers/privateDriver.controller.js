@@ -2,6 +2,8 @@ import bcrypt from "bcryptjs";
 import { getBookingConnection } from "../config/bookingDb.js";
 import { getBookingDriverModel } from "../models/bookingDriver.model.js";
 import Ambulance from "../models/ambulance.model.js";
+import { getBookingDbBookingModel } from "../models/bookingDbBooking.model.js";
+import { getIO } from "../sockets/socket.js";
 export const createPrivateDriver = async (req, res) => {
     try {
         const {
@@ -149,6 +151,86 @@ export const updatePrivateDriver = async (req, res) => {
             success: false,
             message: error.message,
         });
+    }
+};
+export const updateDriverLocation = async (req, res) => {
+    try {
+
+        if (req.user.role !== "private_driver") {
+            return res.status(403).json({
+                success: false,
+                message: "Private driver access required",
+            });
+        }
+
+        const { latitude, longitude } = req.body;
+
+        if (latitude == null || longitude == null) {
+            return res.status(400).json({
+                success: false,
+                message: "Latitude and longitude are required",
+            });
+        }
+
+        const bookingConnection = getBookingConnection();
+
+        const Driver = getBookingDriverModel(bookingConnection);
+
+        const driver = await Driver.findById(req.user._id);
+
+        if (!driver) {
+            return res.status(404).json({
+                success: false,
+                message: "Driver not found",
+            });
+        }
+
+        driver.currentLocation = {
+            latitude,
+            longitude,
+            updatedAt: new Date(),
+        };
+
+        await driver.save();
+
+        const Booking = getBookingDbBookingModel(bookingConnection);
+
+        const activeBooking = await Booking.findOne({
+            ambulance: driver._id,
+            status: {
+                $in: [
+                    "ACCEPTED",
+                    "ARRIVED",
+                    "IN_PROGRESS",
+                ],
+            },
+        });
+
+        if (activeBooking) {
+
+            const io = getIO();
+
+            io.to(`request_${activeBooking._id}`).emit(
+                "driver_location_updated",
+                {
+                    latitude,
+                    longitude,
+                }
+            );
+        }
+
+        return res.status(200).json({
+            success: true,
+            currentLocation: driver.currentLocation,
+        });
+
+    } catch (error) {
+
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+
     }
 };
 export const deletePrivateDriver = async (

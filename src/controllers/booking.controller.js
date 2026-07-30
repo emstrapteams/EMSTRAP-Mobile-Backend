@@ -173,14 +173,24 @@ export const cancelBooking = async (req, res) => {
 };
 export const getBookingById = async (req, res) => {
     try {
-        console.log("BOOKING ID:", req.params.id);
-
         const bookingConnection = getBookingConnection();
-        const BookingModel = getBookingDbBookingModel(bookingConnection);
 
-        const booking = await BookingModel.findById(req.params.id);
+        const Booking =
+            getBookingDbBookingModel(bookingConnection);
 
-        console.log("BOOKING FOUND:", booking);
+        const { getBookingDriverModel } =
+            await import("../models/bookingDriver.model.js");
+
+        const BookingDriver =
+            getBookingDriverModel(bookingConnection);
+
+        const booking = await Booking.findById(req.params.id)
+            .populate({
+                path: "ambulance",
+                model: BookingDriver,
+                select:
+                    "name mobile email vehicleNumber currentLocation driverStatus isOnTrip",
+            });
 
         if (!booking) {
             return res.status(404).json({
@@ -190,22 +200,26 @@ export const getBookingById = async (req, res) => {
         }
 
         if (!(await canAccessBooking(booking, req))) {
-            return res.status(403).json({ success: false, message: "Not authorized to view this booking" });
+            return res.status(403).json({
+                success: false,
+                message: "Not authorized",
+            });
         }
 
         res.json({
             success: true,
             data: booking,
         });
+
     } catch (error) {
-        console.log(error);
+
         res.status(500).json({
             success: false,
             message: error.message,
         });
+
     }
 };
-
 export const getPaymentStatus = async (req, res) => {
     try {
         const bookingConnection = getBookingConnection();
@@ -340,12 +354,21 @@ export const acceptBooking = async (req, res) => {
 
         // Notify the user tracking this booking so Tracking.jsx shows driver immediately
         const io = getIO();
+
+        console.log("==================================");
+        console.log("🚑 ACCEPT BOOKING CALLED");
+        console.log("Booking ID:", booking._id.toString());
+        console.log("Room:", `request_${req.params.id}`);
+        console.log("==================================");
+
         io.to(`request_${req.params.id}`).emit("ambulance_assigned", {
             driverName: req.user.name || "Driver",
             driverMobile: req.user.mobile || "",
             vehicleNumber: req.user.vehicleNumber || "",
             hospitalName: null,
         });
+
+        console.log("✅ ambulance_assigned event emitted");
 
         res.json({
             success: true,
@@ -384,6 +407,11 @@ export const arriveBooking = async (req, res) => {
         booking.status = "ARRIVED";
 
         await booking.save();
+        const io = getIO();
+
+        io.to(`request_${req.params.id}`).emit("booking_updated", {
+            status: booking.status,
+        });
 
         res.status(200).json({
             success: true,
@@ -422,6 +450,11 @@ export const startBookingTrip = async (req, res) => {
         booking.status = "IN_PROGRESS";
 
         await booking.save();
+        const io = getIO();
+
+        io.to(`request_${req.params.id}`).emit("booking_updated", {
+            status: booking.status,
+        });
 
         res.status(200).json({
             success: true,
@@ -461,9 +494,14 @@ export const completeBooking = async (req, res) => {
         booking.status = "COMPLETED";
 
         await booking.save();
+        const io = getIO();
+
+        io.to(`request_${req.params.id}`).emit("booking_updated", {
+            status: booking.status,
+        });
 
         // Notify the user tracking this booking that the trip is done
-        const io = getIO();
+
         io.to(`request_${req.params.id}`).emit("trip_completed", { requestId: req.params.id, status: "COMPLETED" });
 
         res.status(200).json({

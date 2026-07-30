@@ -13,6 +13,7 @@ import usersRoutes from "./src/routes/users.route.js";
 import ambulanceRoutes from "./src/routes/ambulance.route.js";
 import dashboardRoutes from "./src/routes/dashboard.route.js";
 import privateDriverRoutes from "./src/routes/privateDriver.routes.js";
+import driverRoutes from "./src/routes/driver.route.js";
 import patientRoutes from "./src/routes/patient.route.js";
 const app = express();
 const allowedOrigins = [
@@ -57,6 +58,7 @@ app.use("/api/users", usersRoutes);
 app.use("/api/police", policeRoutes);
 app.use("/api/ambulances", ambulanceRoutes);
 app.use("/api/private-drivers", privateDriverRoutes);
+app.use("/api/driver", driverRoutes);
 app.use("/api", dashboardRoutes);
 
 // Root route to check API status

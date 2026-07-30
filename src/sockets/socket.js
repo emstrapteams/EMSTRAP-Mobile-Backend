@@ -90,19 +90,72 @@ export const initSocket = (server) => {
 
           if (now - lastUpdate > 5000) { // 5 seconds throttle
             lastUpdateMap.set(`driver_${data.requestId}`, now);
+            const EmergencyRequest =
+              (await import("../models/emergencyRequest.model.js")).default;
 
-            const EmergencyRequest = (await import("../models/emergencyRequest.model.js")).default;
-            const Ambulance = (await import("../models/ambulance.model.js")).default;
+            const Ambulance =
+              (await import("../models/ambulance.model.js")).default;
 
-            const request = await EmergencyRequest.findById(data.requestId);
+            const { getBookingConnection } =
+              await import("../config/bookingDb.js");
+
+            const { getBookingDriverModel } =
+              await import("../models/bookingDriver.model.js");
+
+            // -------------------------
+            // First check Emergency DB
+            // -------------------------
+
+            const request =
+              await EmergencyRequest.findById(data.requestId);
+
             if (request && request.ambulance) {
-              await Ambulance.findByIdAndUpdate(request.ambulance, {
-                currentLocation: {
-                  latitude: data.lat,
-                  longitude: data.lng
+
+              await Ambulance.findByIdAndUpdate(
+                request.ambulance,
+                {
+                  currentLocation: {
+                    latitude: data.lat,
+                    longitude: data.lng,
+                  },
                 }
-              });
+              );
+
+            } else {
+
+              // -------------------------
+              // Booking DB
+              // -------------------------
+
+              const bookingConnection =
+                getBookingConnection();
+
+              const Booking =
+                (await import("../models/bookingDbBooking.model.js"))
+                  .getBookingDbBookingModel(bookingConnection);
+
+              const BookingDriver =
+                getBookingDriverModel(bookingConnection);
+
+              const booking =
+                await Booking.findById(data.requestId);
+
+              if (booking && booking.ambulance) {
+
+                await BookingDriver.findByIdAndUpdate(
+                  booking.ambulance,
+                  {
+                    currentLocation: {
+                      latitude: data.lat,
+                      longitude: data.lng,
+                    },
+                  }
+                );
+
+              }
+
             }
+
           }
         } catch (err) {
           console.error("Failed to persist driver location:", err);
