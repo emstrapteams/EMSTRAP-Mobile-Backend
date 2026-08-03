@@ -181,3 +181,180 @@ export const acceptEmergencyRequest = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+export const updateDriverStatus = async (req, res) => {
+
+  try {
+    console.log("========== UPDATE DRIVER STATUS ==========");
+    console.log(req.user);
+    console.log("Role:", req.user?.role);
+    console.log("ID:", req.user?._id);
+    if (req.user.role !== "ambulance_driver") {
+
+      return res.status(403).json({
+        success: false,
+        message: "Ambulance driver access required",
+      });
+
+    }
+
+    const { driverStatus } = req.body;
+
+    const ambulance = await Ambulance.findByIdAndUpdate(
+
+      req.user._id,
+
+      {
+        driverStatus,
+      },
+
+      {
+        new: true,
+      }
+
+    ).select("-password");
+
+    return res.status(200).json({
+
+      success: true,
+
+      ambulance,
+
+    });
+
+  } catch (error) {
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: error.message,
+
+    });
+
+  }
+
+};
+export const updateDriverLocation = async (req, res) => {
+
+  try {
+    console.log("========== UPDATE DRIVER LOCATION ==========");
+    console.log(req.user);
+    console.log(req.body);
+
+    if (req.user.role !== "ambulance_driver") {
+
+      return res.status(403).json({
+
+        success: false,
+
+        message: "Ambulance driver access required",
+
+      });
+
+    }
+
+    const {
+
+      latitude,
+
+      longitude,
+
+    } = req.body;
+
+    const ambulance = await Ambulance.findById(req.user._id);
+
+    ambulance.currentLocation = {
+
+      latitude,
+
+      longitude,
+
+      updatedAt: new Date(),
+
+    };
+
+    await ambulance.save();
+
+    const io = getIO();
+
+    io.emit("ambulance_location_updated", {
+
+      ambulanceId: ambulance._id,
+
+      latitude,
+
+      longitude,
+
+    });
+
+    return res.status(200).json({
+
+      success: true,
+
+      currentLocation: ambulance.currentLocation,
+
+    });
+
+  } catch (error) {
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: error.message,
+
+    });
+
+  }
+
+};
+export const getCurrentEmergency = async (req, res) => {
+
+  try {
+
+    const emergency =
+      await EmergencyRequest.findOne({
+
+        ambulance: req.user._id,
+
+        status: {
+
+          $in: [
+
+            "AMBULANCE_ACCEPTED",
+
+            "ARRIVED",
+
+            "IN_PROGRESS",
+
+          ],
+
+        },
+
+      })
+
+        .populate("hospital")
+
+        .populate("user");
+
+    return res.status(200).json({
+
+      success: true,
+
+      emergency,
+
+    });
+
+  } catch (error) {
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: error.message,
+
+    });
+
+  }
+
+};
