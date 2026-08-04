@@ -358,3 +358,130 @@ export const getCurrentEmergency = async (req, res) => {
   }
 
 };
+export const getDriverHistory = async (req, res) => {
+
+  try {
+
+    const history = await EmergencyRequest.find({
+
+      ambulance: req.user._id,
+
+      status: {
+
+        $in: [
+
+          "AMBULANCE_ACCEPTED",
+
+          "ARRIVED",
+
+          "IN_PROGRESS",
+
+          "COMPLETED",
+
+        ],
+
+      },
+
+    })
+
+      .populate("user", "name mobile email")
+
+      .populate("hospital", "hospitalName")
+
+      .sort({
+
+        updatedAt: -1,
+
+      });
+
+    res.json({
+
+      success: true,
+
+      data: history,
+
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+
+      success: false,
+
+      message: err.message,
+
+    });
+
+  }
+
+};
+export const updateMyProfile = async (req, res) => {
+
+  try {
+
+    if (req.user.role !== "ambulance_driver") {
+
+      return res.status(403).json({
+
+        success: false,
+
+        message: "Ambulance driver access required",
+
+      });
+
+    }
+
+    const ambulance =
+      await Ambulance.findById(req.user._id);
+
+    if (!ambulance) {
+
+      return res.status(404).json({
+
+        success: false,
+
+        message: "Driver not found",
+
+      });
+
+    }
+
+    ambulance.name =
+      req.body.name ?? ambulance.name;
+
+    ambulance.mobile =
+      req.body.mobile ?? ambulance.mobile;
+
+    ambulance.city =
+      req.body.city ?? ambulance.city;
+
+    ambulance.address =
+      req.body.address ?? ambulance.address;
+
+    ambulance.vehicleNumber =
+      req.body.vehicleNumber ??
+      ambulance.vehicleNumber;
+
+    await ambulance.save();
+
+    res.json({
+
+      success: true,
+
+      driver: ambulance,
+
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+
+      success: false,
+
+      message: err.message,
+
+    });
+
+  }
+
+};

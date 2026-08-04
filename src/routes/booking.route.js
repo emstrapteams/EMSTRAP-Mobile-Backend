@@ -14,11 +14,17 @@ import {
     completeBooking,
     getPrivateDriverDashboard,
     declineBooking,
+    getPrivateDriverHistory,
 } from "../controllers/booking.controller.js";
 const router = express.Router();
 
 router.post("/", authMiddleware, createBooking);
 router.get("/", authMiddleware, getBookings);
+router.get(
+    "/history",
+    authMiddleware,
+    getPrivateDriverHistory
+);
 router.put("/:id/cancel", authMiddleware, cancelBooking);
 router.get("/available", authMiddleware, getAvailableBookings);
 router.get(

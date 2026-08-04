@@ -17,6 +17,9 @@ import {
 
   getCurrentEmergency,
 
+  getDriverHistory,
+  updateMyProfile,
+
 } from "../controllers/ambulance.controller.js";
 import authMiddleware from "../middlewares/auth.middleware.js";
 import adminMiddleware from "../middlewares/admin.middleware.js";
@@ -24,8 +27,7 @@ import adminMiddleware from "../middlewares/admin.middleware.js";
 const router = Router();
 
 router.get("/", authMiddleware, adminMiddleware, getAmbulances);
-router.get("/:id", authMiddleware, adminMiddleware, getAmbulanceById);
-router.post("/", authMiddleware, adminMiddleware, createAmbulance);
+
 router.put(
   "/status",
   authMiddleware,
@@ -43,7 +45,46 @@ router.get(
   authMiddleware,
   getCurrentEmergency
 );
-router.put("/:id", authMiddleware, adminMiddleware, updateAmbulance);
-router.delete("/:id", authMiddleware, adminMiddleware, deleteAmbulance);
+
+router.get(
+  "/history",
+  authMiddleware,
+  getDriverHistory
+);
+
+router.put(
+  "/profile",
+  authMiddleware,
+  updateMyProfile
+);
+
+// KEEP THESE LAST
+router.get(
+  "/:id",
+  authMiddleware,
+  adminMiddleware,
+  getAmbulanceById
+);
+
+router.put(
+  "/:id",
+  authMiddleware,
+  adminMiddleware,
+  updateAmbulance
+);
+
+router.delete(
+  "/:id",
+  authMiddleware,
+  adminMiddleware,
+  deleteAmbulance
+);
+
+router.post(
+  "/",
+  authMiddleware,
+  adminMiddleware,
+  createAmbulance
+);
 
 export default router;

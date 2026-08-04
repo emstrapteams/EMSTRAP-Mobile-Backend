@@ -6,9 +6,37 @@ import {
     getPrivateDrivers,
     updatePrivateDriver,
     deletePrivateDriver,
+    updateDriverLocation,
+    updatePrivateDriverStatus,
+    getCurrentBooking,
+    updateMyProfile,
 } from "../controllers/privateDriver.controller.js";
 
 const router = express.Router();
+// Private Driver Mobile APIs
+
+router.put(
+    "/status",
+    authMiddleware,
+    updatePrivateDriverStatus
+);
+
+router.put(
+    "/location",
+    authMiddleware,
+    updateDriverLocation
+);
+
+router.get(
+    "/current-booking",
+    authMiddleware,
+    getCurrentBooking
+);
+router.put(
+    "/profile",
+    authMiddleware,
+    updateMyProfile
+);
 
 router.use(authMiddleware, adminMiddleware);
 

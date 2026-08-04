@@ -233,6 +233,132 @@ export const updateDriverLocation = async (req, res) => {
 
     }
 };
+export const updatePrivateDriverStatus = async (
+    req,
+    res
+) => {
+
+    try {
+
+        if (req.user.role !== "private_driver") {
+
+            return res.status(403).json({
+                success: false,
+                message: "Private driver access required",
+            });
+
+        }
+
+        const { driverStatus } = req.body;
+
+        const bookingConnection =
+            getBookingConnection();
+
+        const Driver =
+            getBookingDriverModel(
+                bookingConnection
+            );
+
+        const driver =
+            await Driver.findByIdAndUpdate(
+
+                req.user._id,
+
+                {
+                    driverStatus,
+                },
+
+                {
+                    new: true,
+                }
+
+            ).select("-password");
+
+        if (!driver) {
+
+            return res.status(404).json({
+                success: false,
+                message: "Driver not found",
+            });
+
+        }
+
+        res.status(200).json({
+            success: true,
+            driver,
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+
+    }
+
+};
+export const getCurrentBooking = async (
+    req,
+    res
+) => {
+
+    try {
+
+        const bookingConnection =
+            getBookingConnection();
+
+        const Booking =
+            getBookingDbBookingModel(
+                bookingConnection
+            );
+
+        const booking =
+            await Booking.findOne({
+
+                ambulance: req.user._id,
+
+                status: {
+
+                    $in: [
+
+                        "ACCEPTED",
+
+                        "ARRIVED",
+
+                        "IN_PROGRESS",
+
+                    ],
+
+                },
+
+            })
+
+                .populate("user")
+
+                .populate("ambulance");
+
+        res.status(200).json({
+
+            success: true,
+
+            booking,
+
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+
+            success: false,
+
+            message: error.message,
+
+        });
+
+    }
+
+};
 export const deletePrivateDriver = async (
     req,
     res
@@ -267,4 +393,82 @@ export const deletePrivateDriver = async (
             message: error.message,
         });
     }
+};
+export const updateMyProfile = async (req, res) => {
+
+    try {
+
+        if (req.user.role !== "private_driver") {
+
+            return res.status(403).json({
+
+                success: false,
+
+                message: "Private driver access required",
+
+            });
+
+        }
+
+        const bookingConnection =
+            getBookingConnection();
+
+        const Driver =
+            getBookingDriverModel(
+                bookingConnection
+            );
+
+        const driver =
+            await Driver.findById(req.user._id);
+
+        if (!driver) {
+
+            return res.status(404).json({
+
+                success: false,
+
+                message: "Driver not found",
+
+            });
+
+        }
+
+        driver.name =
+            req.body.name ?? driver.name;
+
+        driver.mobile =
+            req.body.mobile ?? driver.mobile;
+
+        driver.city =
+            req.body.city ?? driver.city;
+
+        driver.address =
+            req.body.address ?? driver.address;
+
+        driver.vehicleNumber =
+            req.body.vehicleNumber ??
+            driver.vehicleNumber;
+
+        await driver.save();
+
+        res.json({
+
+            success: true,
+
+            driver,
+
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+
+            success: false,
+
+            message: err.message,
+
+        });
+
+    }
+
 };

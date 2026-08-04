@@ -367,12 +367,24 @@ export const acceptBooking = async (req, res) => {
             vehicleNumber: req.user.vehicleNumber || "",
             hospitalName: null,
         });
+        io.to("private_driver").emit(
+            "booking_accepted",
+            {
+                bookingId: booking._id,
+            }
+        );
 
         console.log("✅ ambulance_assigned event emitted");
 
+        const updatedBooking = await Booking.findById(
+            booking._id
+        )
+            .populate("user", "name mobile email")
+            .populate("ambulance");
+
         res.json({
             success: true,
-            data: booking
+            data: updatedBooking
         });
 
     } catch (error) {
@@ -607,4 +619,94 @@ export const declineBooking = async (req, res) => {
             message: err.message,
         });
     }
+};
+
+export const getPrivateDriverHistory = async (req, res) => {
+
+    try {
+
+        if (req.user.role !== "private_driver") {
+
+            return res.status(403).json({
+                success: false,
+                message: "Private driver access required",
+            });
+
+        }
+
+        const bookingConnection =
+            getBookingConnection();
+
+        const Booking =
+            getBookingDbBookingModel(
+                bookingConnection
+            );
+
+        const { getBookingUserModel } = await import(
+            "../models/bookingUser.model.js"
+        );
+
+        const { getBookingDriverModel } = await import(
+            "../models/bookingDriver.model.js"
+        );
+
+        const BookingUser =
+            getBookingUserModel(bookingConnection);
+
+        const BookingDriver =
+            getBookingDriverModel(bookingConnection);
+
+        const bookings =
+            await Booking.find({
+
+                ambulance: req.user._id,
+
+                status: "COMPLETED",
+
+            })
+
+                .populate({
+
+                    path: "user",
+
+                    model: BookingUser,
+
+                    select: "name mobile email",
+
+                })
+
+                .populate({
+
+                    path: "ambulance",
+
+                    model: BookingDriver,
+
+                })
+
+                .sort({
+
+                    updatedAt: -1,
+
+                });
+
+        res.json({
+
+            success: true,
+
+            data: bookings,
+
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+
+            success: false,
+
+            message: error.message,
+
+        });
+
+    }
+
 };
