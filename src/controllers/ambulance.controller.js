@@ -485,3 +485,52 @@ export const updateMyProfile = async (req, res) => {
   }
 
 };
+export const getPendingEmergencies = async (req, res) => {
+
+  try {
+
+    const driverId = req.user._id;
+
+    const thirtyMinutesAgo = new Date(
+      Date.now() - 30 * 60 * 1000
+    );
+
+    const emergencies = await EmergencyRequest.find({
+
+      status: "PENDING",
+
+      ambulance: null,
+
+      duplicateDetected: { $ne: true },
+
+      declinedBy: { $ne: driverId },
+
+      createdAt: { $gte: thirtyMinutesAgo },
+
+    })
+
+      .populate("user", "name mobile")
+
+      .sort({ createdAt: -1 });
+
+    res.json({
+
+      success: true,
+
+      data: emergencies,
+
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+
+      success: false,
+
+      message: err.message,
+
+    });
+
+  }
+
+};

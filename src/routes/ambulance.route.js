@@ -19,6 +19,7 @@ import {
 
   getDriverHistory,
   updateMyProfile,
+  getPendingEmergencies,
 
 } from "../controllers/ambulance.controller.js";
 import authMiddleware from "../middlewares/auth.middleware.js";
@@ -56,6 +57,11 @@ router.put(
   "/profile",
   authMiddleware,
   updateMyProfile
+);
+router.get(
+  "/pending",
+  authMiddleware,
+  getPendingEmergencies
 );
 
 // KEEP THESE LAST
