@@ -592,43 +592,59 @@ export const changePassword = async (req, res) => {
   }
 };
 
+
 // FORGOT PASSWORD
 export const forgotPassword = async (req, res) => {
   const email = String(req.body?.email || "").trim().toLowerCase();
+  const platform = String(req.body?.platform || "web").toLowerCase();
+
   try {
     const user = await findAccountByEmail(email);
+
     if (!user) {
-      return res.status(404).json({ message: "There is no user with that email address." });
+      return res.status(404).json({
+        message: "There is no user with that email address."
+      });
     }
 
     // Generate token
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetToken = crypto.randomBytes(32).toString("hex");
 
     // Hash token and set to resetPasswordToken field
-    user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+    user.resetPasswordToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    user.resetPasswordExpire =
+      Date.now() + 10 * 60 * 1000;
 
     await user.save();
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+    const frontendUrl =
+      process.env.FRONTEND_URL ||
+      "http://localhost:5173";
+
+    const mobileUrl = "exp://192.168.1.7:8081";
+
+    const resetUrl =
+      platform === "mobile"
+        ? `${mobileUrl}/--/reset-password/${resetToken}`
+        : `${frontendUrl}/reset-password/${resetToken}`;
 
     const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a PUT request to: \n\n ${resetUrl}`;
 
     const htmlMessage = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-        <h2 style="color: #333;">Password Reset Request</h2>
-        <p style="color: #555; font-size: 16px;">Hello ${user.name},</p>
-        <p style="color: #555; font-size: 16px;">We received a request to reset your password. You can reset it by clicking the link below:</p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${resetUrl}" style="background-color: #E53E3E; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block;">Reset Password</a>
-        </div>
-        <p style="color: #777; font-size: 14px;">If you didn't request this, please ignore this email and your password will remain unchanged.</p>
-        <p style="color: #777; font-size: 12px; margin-top: 30px; border-top: 1px solid #e0e0e0; padding-top: 15px;">
-          This link will expire in 10 minutes.
-        </p>
-      </div>
-    `;
+  <h2>Password Reset Request</h2>
+
+  <p>Click the link below:</p>
+
+  <p>${resetUrl}</p>
+
+  <a href="${resetUrl}">
+    ${resetUrl}
+  </a>
+`;
 
     try {
       await sendEmail({
